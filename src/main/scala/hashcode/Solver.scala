@@ -2,7 +2,7 @@ package hashcode
 
 object Solver {
 
-  case class Orientation(rows: Int = 12, cols: Int = 1)
+  case class Orientation(rows: Int, cols: Int)
   val orientations = for {
     r <- List(1, 2, 3, 4, 6, 12)
     c = 12 / r
@@ -36,12 +36,14 @@ object Solver {
   }
 
   def split(block: Pizza, problem: Problem, orientation: Orientation): List[Pizza] = {
+    println(s"splitting $block")
     val pizzas = for {
       row <- block.topleft.row until block.botRight.row by orientation.rows
       col <- block.topleft.col until block.botRight.col by orientation.cols
     } yield {
       val rowEnd = orientation.rows + row - 1
       val colEnd = orientation.cols + col - 1
+      println(s"$row to $rowEnd x $col to $colEnd")
       val hams = (for {
         i <- row to rowEnd
         j <- col to colEnd
