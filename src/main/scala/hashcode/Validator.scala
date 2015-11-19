@@ -16,6 +16,7 @@ object Validator {
 
     Try {
       solution.sol foreach validateSlice
+      solution.sol.combinations(2) foreach { case List(s1,s2) ⇒ checkNonOverlap(s1,s2) }
       (solution.sol map sliceSize).sum
     }
 
@@ -23,5 +24,9 @@ object Validator {
 
   def sliceSize(slice: Slice): Int = {
     (slice.p2.row - slice.p1.row + 1) * (slice.p2.col - slice.p1.col + 1)
+  }
+  def checkNonOverlap(slice1: Slice, slice2:Slice) = {
+    assert(slice2.p2.row < slice1.p1.row || slice1.p2.row < slice2.p1.row || slice2.p2.col < slice1.p1.col || slice1.p2.col < slice2.p1.col,
+    s"Slice $slice1 and slice $slice2 overlaps")
   }
 }
