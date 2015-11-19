@@ -15,9 +15,9 @@ object Solver {
     val slices = for {
       pizza <- split(problem, Orientation())
       if pizza.isOk(problem)
-    } yield pizza.asSlice
+    } yield pizza
 
-    Solution(slices.toList)
+    Solution(slices.map(_.asSlice).toList)
   }
 
   def split(problem: Problem, orientation: Orientation): List[Pizza] = {
@@ -30,7 +30,7 @@ object Solver {
       val hams = (for {
         i <- row to rowEnd
         j <- col to colEnd
-        ham = problem.pizza(row)(col) == 'H'
+        ham = problem.pizza(i)(j) == 'H'
       } yield Point(i, j) -> ham).toMap
 
       Pizza(Point(row, col), Point(rowEnd, colEnd), hams)
