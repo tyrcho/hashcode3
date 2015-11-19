@@ -31,8 +31,34 @@ object Solver {
   }
 
   def solve(problem: Problem): Solution = {
-    val blocks = split(problem, Orientation(12, 12))
-    Solution(blocks.flatMap(solveBlock(_, problem)))
+    def buildCandidates(remainingPizza: List[List[Boolean]], from: Point): List[Slice] =
+      ???
+
+    def updateRemaining(remainingPizza: List[List[Boolean]], slice: Slice): List[List[Boolean]] =
+      ???
+
+    def solveRec(remainingPizza: List[List[Boolean]], slices: List[Slice], last: Point = Point(0, 0)): List[Slice] = {
+
+      val candidates = for {
+        i <- last.row until problem.nbRows
+        j <- last.col until problem.nbCols
+      } yield Point(i, j)
+      candidates.find(c => remainingPizza(c.row)(c.col)) match {
+        case Some(topLeftFree) =>
+          val candidateSlices = buildCandidates(remainingPizza, topLeftFree)
+          if (candidateSlices.isEmpty) slices //todo
+          else {
+            val slice = candidateSlices.maxBy(???)
+            solveRec(
+              updateRemaining(remainingPizza, slice),
+              slice :: slices,
+              slice.p2)
+          }
+        case None => slices
+      }
+    }
+    val slices = solveRec(List.fill(problem.nbRows)(List.fill(problem.nbCols)(true)), Nil)
+    Solution(slices)
   }
 
   def split(block: Pizza, problem: Problem, orientation: Orientation): List[Pizza] = {
