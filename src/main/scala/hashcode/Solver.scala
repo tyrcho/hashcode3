@@ -1,7 +1,15 @@
 package hashcode
 
 object Solver {
-
+  val possibleOrientations = List(
+    Orientation(1,3), Orientation(3,1), Orientation(1,4), Orientation(4,1), Orientation(2,2), Orientation(1,5), Orientation(5,1), Orientation(1,6), Orientation(6,1),
+    Orientation(2,3), Orientation(3,2), Orientation(1,7), Orientation(7,1), Orientation(1,8), Orientation(8,1), Orientation(2,4), Orientation(4,2),
+    Orientation(1,9), Orientation(9,1), Orientation(2,3), Orientation(3,2), Orientation(1,7), Orientation(7,1), Orientation(1,8), Orientation(8,1),
+    Orientation(2,4), Orientation(4,2), Orientation(1,9), Orientation(9,1), Orientation(3,3),
+    Orientation(1,10), Orientation(10,1), Orientation(2,5), Orientation(5,2), Orientation(1,11), Orientation(11,1),
+    Orientation(1,12), Orientation(12,1), Orientation(2,6), Orientation(6,2), Orientation(3,4), Orientation(4,3)
+  )
+  
   case class Orientation(rows: Int, cols: Int)
   val orientations = for {
     r <- List(1, 2, 3, 4, 6, 12)

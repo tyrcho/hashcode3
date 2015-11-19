@@ -21,7 +21,7 @@ object Validator {
       solution.sol.combinations(2) foreach { case List(s1,s2) ⇒
         assert(!s1.overlaps(s2), s"Slice $s1 and slice $s2 overlaps")
       }
-      (solution.sol map (_.size)).sum
+      solution.sol.map(_.size).sum
     }
 
   }
