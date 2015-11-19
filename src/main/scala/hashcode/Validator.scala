@@ -8,6 +8,8 @@ object Validator {
     def validateSlice(slice: Slice) = {
       assert(slice.p1.row <= slice.p2.row, s"Incorrect slice: $slice")
       assert(slice.p1.col <= slice.p2.col, s"Incorrect slice: $slice")
+      assert(slice.p1.row >= 0 && slice.p2.row < problem.nbRows, s"Incorrect slice: $slice")
+      assert(slice.p1.col >= 0 && slice.p2.col < problem.nbCols, s"Incorrect slice: $slice")
       assert( sliceSize(slice) <= problem.maxCells, s"slice $slice is too big")
       val pSlice = problem.pizza.slice(slice.p1.row, slice.p2.row+1) map { _.slice(slice.p1.col, slice.p2.col+1) }
       val nHam = pSlice.flatten.count('H'.==)
