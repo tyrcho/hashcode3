@@ -91,8 +91,20 @@ object Solver {
         case None => slices
       }
     }
-    val slices = solveRec(List.fill(problem.nbRows)(List.fill(problem.nbCols)(true)), Nil)
-    Solution(slices)
+
+    val blocks = split(problem, Orientation(12, 12))
+    val initSlices = blocks.flatMap(solveBlock(_, problem))
+    val usedPoints = initSlices.flatMap(_.points)
+    val rest = for {
+      i <- (0 until problem.nbRows).toList
+    } yield for {
+      j <- (0 until problem.nbCols).toList
+      p = Point(i, j)
+      used = usedPoints.contains(p)
+    } yield !used
+    val slices = solveRec(rest, Nil)
+    Solution(initSlices ::: slices)
+
   }
 
   def split(block: Pizza, problem: Problem, orientation: Orientation): List[Pizza] = {
