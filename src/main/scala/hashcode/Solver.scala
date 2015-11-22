@@ -26,17 +26,17 @@ object Solver {
     val solutions = for {
       o <- orientations
     } yield {
-      val slices = for {
-        pizza <- split(block, problem, o)
-        if pizza.isOk(problem)
-      } yield pizza
+        val slices = for {
+          pizza <- split(block, problem, o)
+          if pizza.isOk(problem)
+        } yield pizza
 
-      Solution(slices.map(_.asSlice).toList) -> slices.size
-    }
+        Solution(slices.map(_.asSlice).toList) -> slices.size
+      }
     solutions.maxBy(_._2)._1.sol
   }
 
-  def solve(problem: Problem): Solution = {
+  def solve2(problem: Problem): Solution = {
     def buildCandidates(remainingPizza: List[List[Boolean]], from: Point): List[Slice] =
       for {
         or <- possibleOrientations
@@ -98,10 +98,10 @@ object Solver {
     val rest = for {
       i <- (0 until problem.nbRows).toList
     } yield for {
-      j <- (0 until problem.nbCols).toList
-      p = Point(i, j)
-      used = usedPoints.contains(p)
-    } yield !used
+        j <- (0 until problem.nbCols).toList
+        p = Point(i, j)
+        used = usedPoints.contains(p)
+      } yield !used
     val slices = solveRec(rest, Nil)
     Solution(initSlices ::: slices)
 
@@ -113,26 +113,26 @@ object Solver {
       row <- block.topleft.row until block.botRight.row by orientation.rows
       col <- block.topleft.col until block.botRight.col by orientation.cols
     } yield {
-      val rowEnd = orientation.rows + row - 1
-      val colEnd = orientation.cols + col - 1
-      println(s"$row to $rowEnd x $col to $colEnd")
-      val hams = (for {
-        i <- row to rowEnd
-        j <- col to colEnd
-        ham = problem.pizza(i)(j) == 'H'
-      } yield Point(i, j) -> ham).toMap
+        val rowEnd = orientation.rows + row - 1
+        val colEnd = orientation.cols + col - 1
+        println(s"$row to $rowEnd x $col to $colEnd")
+        val hams = (for {
+          i <- row to rowEnd
+          j <- col to colEnd
+          ham = problem.pizza(i)(j) == 'H'
+        } yield Point(i, j) -> ham).toMap
 
-      Pizza(Point(row, col), Point(rowEnd, colEnd), hams)
-    }
+        Pizza(Point(row, col), Point(rowEnd, colEnd), hams)
+      }
     pizzas.toList
   }
 
   def split(problem: Problem, orientation: Orientation): List[Pizza] =
-    {
-      val pizzas = for {
-        row <- 0 until problem.nbRows by orientation.rows
-        col <- 0 until problem.nbCols by orientation.cols
-      } yield {
+  {
+    val pizzas = for {
+      row <- 0 until problem.nbRows by orientation.rows
+      col <- 0 until problem.nbCols by orientation.cols
+    } yield {
         val rowEnd = orientation.rows + row - 1
         val colEnd = orientation.cols + col - 1
         val hams = (for {
@@ -143,6 +143,53 @@ object Solver {
 
         Pizza(Point(row, col), Point(rowEnd, colEnd), hams)
       }
-      pizzas.toList
-    }
+    pizzas.toList
+  }
+
+  def solve(problem: Problem) = {
+    case class FoldState(ham:Int, slices: List[Slice])
+    def initialState(row:Int) = FoldState(0, List(Slice(Point(row, 0), Point(row ,-1))))
+    Solution(
+      problem.pizza.zipWithIndex flatMap { case (line, row) ⇒
+        //        print("(")
+        val state = line.foldLeft(initialState(row)) { (state, elem) ⇒
+          val (cur :: tail) = state.slices
+          val np2 = cur.p2.copy(col = cur.p2.col + 1)
+          val isHam = elem == 'H'
+          val ham = if (isHam) 1 else 0
+          val size = cur.p2.col - cur.p1.col + 1
+          if (state.ham == problem.nHam && (isHam ||size == problem.maxCells)) {
+            //start new slice
+            //            print(s")($elem")
+            FoldState(ham, Slice(np2,np2) :: state.slices)
+          } else if (size == problem.maxCells) {
+            // slide current slice to right
+            val np1 = cur.p1.copy(col = cur.p1.col + 1)
+            val removedHam = if (problem.isHam(row, cur.p1.col)) 1 else 0
+            //            print(s"$elem")
+            tail match {
+              case prev::tail if prev.size < problem.maxCells ⇒
+                // increase previous slice
+                FoldState(state.ham + ham - removedHam,
+                  cur.copy(p1=np1, np2) :: prev.copy(p2 = cur.p1) :: tail)
+              case _        ⇒
+                // waste an element
+                FoldState(state.ham + ham - removedHam,
+                  cur.copy(p1=np1, np2) :: tail)
+            }
+          } else {
+            //            print(s"$elem")
+            FoldState(state.ham + ham, cur.copy(p2=np2) :: tail)
+          }
+        }
+        //        if (state.ham < problem.nHam) println() else println(")")
+        if (state.ham >= problem.nHam) state.slices else state.slices.tail match {
+          case head :: tail ⇒
+            val ncol = (head.p2.col + problem.maxCells - head.size) min state.slices.head.p2.col
+            head.copy(p2=head.p2.copy(col=ncol)) :: tail
+          case _ ⇒ Nil
+        }
+      }
+    )
+  }
 }

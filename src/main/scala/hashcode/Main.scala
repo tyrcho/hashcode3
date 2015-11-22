@@ -1,8 +1,6 @@
 package hashcode
 
-import java.io.PrintStream
-import scala.util.Failure
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 object Main extends App {
   val problem = Parser.read()
@@ -13,6 +11,7 @@ object Main extends App {
       Formatter.write(solution, score)
     case Failure(e) =>
       e.printStackTrace()
+      Formatter.write(solution, 0)
   }
 
 }
