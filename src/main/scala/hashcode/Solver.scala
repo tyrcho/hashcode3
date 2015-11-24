@@ -26,13 +26,13 @@ object Solver {
     val solutions = for {
       o <- orientations
     } yield {
-        val slices = for {
-          pizza <- split(block, problem, o)
-          if pizza.isOk(problem)
-        } yield pizza
+      val slices = for {
+        pizza <- split(block, problem, o)
+        if pizza.isOk(problem)
+      } yield pizza
 
-        Solution(slices.map(_.asSlice).toList) -> slices.size
-      }
+      Solution(slices.map(_.asSlice).toList) -> slices.size
+    }
     solutions.maxBy(_._2)._1.sol
   }
 
@@ -98,10 +98,10 @@ object Solver {
     val rest = for {
       i <- (0 until problem.nbRows).toList
     } yield for {
-        j <- (0 until problem.nbCols).toList
-        p = Point(i, j)
-        used = usedPoints.contains(p)
-      } yield !used
+      j <- (0 until problem.nbCols).toList
+      p = Point(i, j)
+      used = usedPoints.contains(p)
+    } yield !used
     val slices = solveRec(rest, Nil)
     Solution(initSlices ::: slices)
 
@@ -113,26 +113,26 @@ object Solver {
       row <- block.topleft.row until block.botRight.row by orientation.rows
       col <- block.topleft.col until block.botRight.col by orientation.cols
     } yield {
-        val rowEnd = orientation.rows + row - 1
-        val colEnd = orientation.cols + col - 1
-        println(s"$row to $rowEnd x $col to $colEnd")
-        val hams = (for {
-          i <- row to rowEnd
-          j <- col to colEnd
-          ham = problem.pizza(i)(j) == 'H'
-        } yield Point(i, j) -> ham).toMap
+      val rowEnd = orientation.rows + row - 1
+      val colEnd = orientation.cols + col - 1
+      println(s"$row to $rowEnd x $col to $colEnd")
+      val hams = (for {
+        i <- row to rowEnd
+        j <- col to colEnd
+        ham = problem.pizza(i)(j) == 'H'
+      } yield Point(i, j) -> ham).toMap
 
-        Pizza(Point(row, col), Point(rowEnd, colEnd), hams)
-      }
+      Pizza(Point(row, col), Point(rowEnd, colEnd), hams)
+    }
     pizzas.toList
   }
 
   def split(problem: Problem, orientation: Orientation): List[Pizza] =
-  {
-    val pizzas = for {
-      row <- 0 until problem.nbRows by orientation.rows
-      col <- 0 until problem.nbCols by orientation.cols
-    } yield {
+    {
+      val pizzas = for {
+        row <- 0 until problem.nbRows by orientation.rows
+        col <- 0 until problem.nbCols by orientation.cols
+      } yield {
         val rowEnd = orientation.rows + row - 1
         val colEnd = orientation.cols + col - 1
         val hams = (for {
@@ -143,14 +143,14 @@ object Solver {
 
         Pizza(Point(row, col), Point(rowEnd, colEnd), hams)
       }
-    pizzas.toList
-  }
+      pizzas.toList
+    }
 
   def solve(problem: Problem) = {
-    case class FoldState(ham:Int, slices: List[Slice])
-    def initialState(row:Int, height:Int) = FoldState(0, List(Slice(Point(row, 0), Point(row+height-1 ,-1))))
+    case class FoldState(ham: Int, slices: List[Slice])
+    def initialState(row: Int, height: Int) = FoldState(0, List(Slice(Point(row, 0), Point(row + height - 1, -1))))
 
-    def splitLines(lines: List[String], row: Int ) = {
+    def splitLines(lines: List[String], row: Int) = {
       val state = lines.transpose.foldLeft(initialState(row, lines.length)) { (state, elems) ⇒
         val (cur :: tail) = state.slices
         val np2 = cur.p2.copy(col = cur.p2.col + 1)
@@ -184,12 +184,41 @@ object Solver {
       if (state.ham >= problem.nHam) state.slices
       else state.slices.tail match {
         case head :: tail ⇒
-          val ncol = (head.p2.col + (problem.maxCells - head.size)/lines.length) min state.slices.head.p2.col
+          val ncol = (head.p2.col + (problem.maxCells - head.size) / lines.length) min state.slices.head.p2.col
           head.copy(p2 = head.p2.copy(col = ncol)) :: tail
         case _ ⇒ Nil
       }
 
     }
+
+    def chooseCorrectSplit(problem: Problem): List[Slice] = {
+
+      def chooseCorrectSplitRec(lines: List[String], row: Int, slices: List[Slice]): List[Slice] = {
+        if (lines != List.empty) {
+          if (lines.size >= 2) {
+            val split1 = splitLines(lines.take(1), row)
+            val split2 = splitLines(List(lines(1)), row)
+            val scoreSplit1 = split1.map(slice => slice.size).sum
+            val scoreSplit2 = split2.map(slice => slice.size).sum
+            val splitDouble = splitLines(lines.take(2), row)
+            val scoreDouble = splitDouble.map(slice => slice.size).sum
+            if (scoreSplit1 + scoreSplit2 > scoreDouble) {
+              chooseCorrectSplitRec(lines.drop(1), row + 1, slices ::: split1)
+            } else {
+              chooseCorrectSplitRec(lines.drop(2), row + 2, slices ::: splitDouble)
+            }
+          } else {
+            chooseCorrectSplitRec(lines.drop(1), row + 1, slices ::: splitLines(lines.take(1), row))
+          }
+        } else {
+          slices
+        }
+      }
+
+      chooseCorrectSplitRec(problem.pizza, 0, List.empty)
+
+    }
+
     /*
     def splitLine(line: String, row: Int) : List[Slice] = {
       //        print("(")
@@ -234,8 +263,6 @@ object Solver {
 
     }
     */
-    Solution(
-      (problem.pizza.zipWithIndex.grouped(2) flatMap { case l ⇒ splitLines(l map (_._1), l.head._2) }).toList
-    )
+    Solution(chooseCorrectSplit(problem))
   }
 }
