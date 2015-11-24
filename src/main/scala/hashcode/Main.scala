@@ -15,12 +15,22 @@ object Main extends App {
       Formatter.write(solution, 0)
   }
 
+  lazy val colors = Iterator.continually(Iterator(Console.BLUE_B, Console.RED_B, Console.MAGENTA_B, Console.CYAN_B)).flatten
 
   def display(problem: Problem, solution: Solution) = {
-    val res = solution.sol.foldLeft(problem.pizza) { (pizza,slice) ⇒
-      val sol1 = pizza.updated(slice.p1.row, pizza(slice.p1.row).updated(slice.p1.col, '['))
-      sol1.updated(slice.p2.row, sol1(slice.p2.row).updated(slice.p2.col, ']'))
+    def addColor(str: String, color: String, from: Int, to: Int) = {
+      val (before, right) = str.splitAt(from)
+      val (mid, after) = right.splitAt(to-from+1)
+      before + color + mid + Console.RESET + after
     }
-    println(res.mkString("\n"))
+
+    val res = solution.sol.foldLeft(problem.pizza) { (pizza,slice) ⇒
+      val color = colors.next()
+      (slice.p1.row to slice.p2.row).foldLeft(pizza) { (pizza, r) ⇒
+        pizza.updated(r, addColor(pizza(r), color, slice.p1.col, slice.p2.col))
+      }
+    }
+
+    println(res.mkString("\n").replace('T', ' '))
   }
 }
