@@ -148,48 +148,94 @@ object Solver {
 
   def solve(problem: Problem) = {
     case class FoldState(ham:Int, slices: List[Slice])
-    def initialState(row:Int) = FoldState(0, List(Slice(Point(row, 0), Point(row ,-1))))
-    Solution(
-      problem.pizza.zipWithIndex flatMap { case (line, row) ⇒
-        //        print("(")
-        val state = line.foldLeft(initialState(row)) { (state, elem) ⇒
-          val (cur :: tail) = state.slices
-          val np2 = cur.p2.copy(col = cur.p2.col + 1)
-          val isHam = elem == 'H'
-          val ham = if (isHam) 1 else 0
-          val size = cur.p2.col - cur.p1.col + 1
-          if (state.ham == problem.nHam && (isHam ||size == problem.maxCells)) {
-            //start new slice
-            //            print(s")($elem")
-            FoldState(ham, Slice(np2,np2) :: state.slices)
-          } else if (size == problem.maxCells) {
-            // slide current slice to right
-            val np1 = cur.p1.copy(col = cur.p1.col + 1)
-            val removedHam = if (problem.isHam(row, cur.p1.col)) 1 else 0
-            //            print(s"$elem")
-            tail match {
-              case prev::tail if prev.size < problem.maxCells ⇒
-                // increase previous slice
-                FoldState(state.ham + ham - removedHam,
-                  cur.copy(p1=np1, np2) :: prev.copy(p2 = cur.p1) :: tail)
-              case _        ⇒
-                // waste an element
-                FoldState(state.ham + ham - removedHam,
-                  cur.copy(p1=np1, np2) :: tail)
-            }
-          } else {
-            //            print(s"$elem")
-            FoldState(state.ham + ham, cur.copy(p2=np2) :: tail)
+    def initialState(row:Int, height:Int) = FoldState(0, List(Slice(Point(row, 0), Point(row+height-1 ,-1))))
+
+    def splitLines(lines: List[String], row: Int ) = {
+      val state = lines.transpose.foldLeft(initialState(row, lines.length)) { (state, elems) ⇒
+        val (cur :: tail) = state.slices
+        val np2 = cur.p2.copy(col = cur.p2.col + 1)
+        val ham = elems.count('H'.==)
+        val size = cur.size + elems.length
+        if (state.ham >= problem.nHam && (ham > 0 || size > problem.maxCells)) {
+          //start new slice
+          //            print(s")($elem")
+          FoldState(ham, Slice(cur.p1.copy(col = np2.col), np2) :: state.slices)
+        } else if (size > problem.maxCells) {
+          // slide current slice to right
+          val np1 = cur.p1.copy(col = cur.p1.col + 1)
+          val removedHam = (row until row + elems.length).count(problem.isHam(_, cur.p1.col))
+          //            print(s"$elem")
+          tail match {
+            case prev :: tail if prev.size + elems.length <= problem.maxCells ⇒
+              // increase previous slice
+              FoldState(state.ham + ham - removedHam,
+                cur.copy(p1 = np1, np2) :: prev.copy(p2 = prev.p2.copy(col = prev.p2.col + 1)) :: tail)
+            case _ ⇒
+              // waste some elements
+              FoldState(state.ham + ham - removedHam,
+                cur.copy(p1 = np1, np2) :: tail)
           }
-        }
-        //        if (state.ham < problem.nHam) println() else println(")")
-        if (state.ham >= problem.nHam) state.slices else state.slices.tail match {
-          case head :: tail ⇒
-            val ncol = (head.p2.col + problem.maxCells - head.size) min state.slices.head.p2.col
-            head.copy(p2=head.p2.copy(col=ncol)) :: tail
-          case _ ⇒ Nil
+        } else {
+          //            print(s"$elem")
+          FoldState(state.ham + ham, cur.copy(p2 = np2) :: tail)
         }
       }
+
+      if (state.ham >= problem.nHam) state.slices
+      else state.slices.tail match {
+        case head :: tail ⇒
+          val ncol = (head.p2.col + (problem.maxCells - head.size)/lines.length) min state.slices.head.p2.col
+          head.copy(p2 = head.p2.copy(col = ncol)) :: tail
+        case _ ⇒ Nil
+      }
+
+    }
+    /*
+    def splitLine(line: String, row: Int) : List[Slice] = {
+      //        print("(")
+      val state = line.foldLeft(initialState(row)) { (state, elem) ⇒
+        val (cur :: tail) = state.slices
+        val np2 = cur.p2.copy(col = cur.p2.col + 1)
+        val isHam = elem == 'H'
+        val ham = if (isHam) 1 else 0
+        val size = cur.p2.col - cur.p1.col + 1
+        if (state.ham == problem.nHam && (isHam || size == problem.maxCells)) {
+          //start new slice
+          //            print(s")($elem")
+          FoldState(ham, Slice(np2, np2) :: state.slices)
+        } else if (size == problem.maxCells) {
+          // slide current slice to right
+          val np1 = cur.p1.copy(col = cur.p1.col + 1)
+          val removedHam = if (problem.isHam(row, cur.p1.col)) 1 else 0
+          //            print(s"$elem")
+          tail match {
+            case prev :: tail if prev.size < problem.maxCells ⇒
+              // increase previous slice
+              FoldState(state.ham + ham - removedHam,
+                cur.copy(p1 = np1, np2) :: prev.copy(p2 = cur.p1) :: tail)
+            case _ ⇒
+              // waste an element
+              FoldState(state.ham + ham - removedHam,
+                cur.copy(p1 = np1, np2) :: tail)
+          }
+        } else {
+          //            print(s"$elem")
+          FoldState(state.ham + ham, cur.copy(p2 = np2) :: tail)
+        }
+      }
+      //        if (state.ham < problem.nHam) println() else println(")")
+      if (state.ham >= problem.nHam) state.slices
+      else state.slices.tail match {
+        case head :: tail ⇒
+          val ncol = (head.p2.col + problem.maxCells - head.size) min state.slices.head.p2.col
+          head.copy(p2 = head.p2.copy(col = ncol)) :: tail
+        case _ ⇒ Nil
+      }
+
+    }
+    */
+    Solution(
+      (problem.pizza.zipWithIndex.grouped(2) flatMap { case l ⇒ splitLines(l map (_._1), l.head._2) }).toList
     )
   }
 }
