@@ -191,31 +191,35 @@ object Solver {
 
     }
 
-    def chooseCorrectSplit(problem: Problem): List[Slice] = {
+    def chooseCorrectSplit(problem: Problem, scoreMin: Int): List[Slice] = {
 
-      def chooseCorrectSplitRec(lines: List[String], row: Int, slices: List[Slice]): List[Slice] = {
+      def chooseCorrectSplitRec(lines: List[String], row: Int, scoreMin: Int, slices: List[Slice]): List[Slice] = {
         if (lines != List.empty) {
           if (lines.size >= 2) {
             val split1 = splitLines(lines.take(1), row)
-            val split2 = splitLines(List(lines(1)), row)
             val scoreSplit1 = split1.map(slice => slice.size).sum
+            val split2 = splitLines(List(lines(1)), row + 1)
             val scoreSplit2 = split2.map(slice => slice.size).sum
             val splitDouble = splitLines(lines.take(2), row)
             val scoreDouble = splitDouble.map(slice => slice.size).sum
-            if (scoreSplit1 + scoreSplit2 > scoreDouble) {
-              chooseCorrectSplitRec(lines.drop(1), row + 1, slices ::: split1)
+            if (scoreSplit1 >= scoreMin) {
+              chooseCorrectSplitRec(lines.drop(1), row + 1, scoreMin, slices ::: split1)
             } else {
-              chooseCorrectSplitRec(lines.drop(2), row + 2, slices ::: splitDouble)
+              if (scoreSplit1 + scoreSplit2 > scoreDouble) {
+                chooseCorrectSplitRec(lines.drop(2), row + 2, scoreMin, slices ::: split1 ::: split2)
+              } else {
+                chooseCorrectSplitRec(lines.drop(2), row + 2, scoreMin, slices ::: splitDouble)
+              }
             }
           } else {
-            chooseCorrectSplitRec(lines.drop(1), row + 1, slices ::: splitLines(lines.take(1), row))
+            chooseCorrectSplitRec(lines.drop(1), row + 1, scoreMin, slices ::: splitLines(lines.take(1), row))
           }
         } else {
           slices
         }
       }
 
-      chooseCorrectSplitRec(problem.pizza, 0, List.empty)
+      chooseCorrectSplitRec(problem.pizza, 0, 59, List.empty)
 
     }
 
@@ -263,6 +267,6 @@ object Solver {
 
     }
     */
-    Solution(chooseCorrectSplit(problem))
+    Solution(chooseCorrectSplit(problem, 20))
   }
 }
