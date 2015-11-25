@@ -191,82 +191,48 @@ object Solver {
 
     }
 
-    def chooseCorrectSplit(problem: Problem, scoreMin: Int): List[Slice] = {
+    def optimalSplit(problem: Problem): List[Slice] = {
 
-      def chooseCorrectSplitRec(lines: List[String], row: Int, scoreMin: Int, slices: List[Slice]): List[Slice] = {
-        if (lines != List.empty) {
-          if (lines.size >= 2) {
-            val split1 = splitLines(lines.take(1), row)
-            val scoreSplit1 = split1.map(slice => slice.size).sum
-            val split2 = splitLines(List(lines(1)), row + 1)
-            val scoreSplit2 = split2.map(slice => slice.size).sum
-            val splitDouble = splitLines(lines.take(2), row)
-            val scoreDouble = splitDouble.map(slice => slice.size).sum
-            if (scoreSplit1 >= scoreMin) {
-              chooseCorrectSplitRec(lines.drop(1), row + 1, scoreMin, slices ::: split1)
-            } else {
-              if (scoreSplit1 + scoreSplit2 > scoreDouble) {
-                chooseCorrectSplitRec(lines.drop(2), row + 2, scoreMin, slices ::: split1 ::: split2)
-              } else {
-                chooseCorrectSplitRec(lines.drop(2), row + 2, scoreMin, slices ::: splitDouble)
-              }
-            }
-          } else {
-            chooseCorrectSplitRec(lines.drop(1), row + 1, scoreMin, slices ::: splitLines(lines.take(1), row))
-          }
+      case class ScorePointer(previousRow: Int, score: Int)
+
+      def computeScore(problem: Problem, from: Int, to: Int): Int = {
+        splitLines(problem.pizza.slice(from, to), from).map(slice => slice.size).sum
+      }
+
+      def constructScore(problem: Problem, splits: List[ScorePointer]): List[ScorePointer] = {
+        val currentRow = splits.size
+        if (problem.nbRows == currentRow + 1) {
+          splits
         } else {
-          slices
+          val interestedSplits = splits.takeRight(6)
+          val scoreSplits = interestedSplits.zipWithIndex.map({ case (split, index) => split.score + computeScore(problem, currentRow - interestedSplits.size + index, currentRow) })
+          val optimalSplit = scoreSplits.zipWithIndex.maxBy(_._1)
+          val selectedSplit = ScorePointer(currentRow - interestedSplits.size + optimalSplit._2, optimalSplit._1)
+          constructScore(problem, splits ::: List(selectedSplit))
         }
       }
 
-      chooseCorrectSplitRec(problem.pizza, 0, 59, List.empty)
-
-    }
-
-    /*
-    def splitLine(line: String, row: Int) : List[Slice] = {
-      //        print("(")
-      val state = line.foldLeft(initialState(row)) { (state, elem) ⇒
-        val (cur :: tail) = state.slices
-        val np2 = cur.p2.copy(col = cur.p2.col + 1)
-        val isHam = elem == 'H'
-        val ham = if (isHam) 1 else 0
-        val size = cur.p2.col - cur.p1.col + 1
-        if (state.ham == problem.nHam && (isHam || size == problem.maxCells)) {
-          //start new slice
-          //            print(s")($elem")
-          FoldState(ham, Slice(np2, np2) :: state.slices)
-        } else if (size == problem.maxCells) {
-          // slide current slice to right
-          val np1 = cur.p1.copy(col = cur.p1.col + 1)
-          val removedHam = if (problem.isHam(row, cur.p1.col)) 1 else 0
-          //            print(s"$elem")
-          tail match {
-            case prev :: tail if prev.size < problem.maxCells ⇒
-              // increase previous slice
-              FoldState(state.ham + ham - removedHam,
-                cur.copy(p1 = np1, np2) :: prev.copy(p2 = cur.p1) :: tail)
-            case _ ⇒
-              // waste an element
-              FoldState(state.ham + ham - removedHam,
-                cur.copy(p1 = np1, np2) :: tail)
-          }
+      def callBack(splits: List[ScorePointer], result: List[Int]): List[Int] = {
+        val lastSplit = splits.last
+        if (lastSplit.previousRow == -1) {
+          result
         } else {
-          //            print(s"$elem")
-          FoldState(state.ham + ham, cur.copy(p2 = np2) :: tail)
+          callBack(splits.take(lastSplit.previousRow + 1), splits.size - lastSplit.previousRow - 1 :: result)
         }
       }
-      //        if (state.ham < problem.nHam) println() else println(")")
-      if (state.ham >= problem.nHam) state.slices
-      else state.slices.tail match {
-        case head :: tail ⇒
-          val ncol = (head.p2.col + problem.maxCells - head.size) min state.slices.head.p2.col
-          head.copy(p2 = head.p2.copy(col = ncol)) :: tail
-        case _ ⇒ Nil
+
+      def executeSplit(problem: Problem, splits: List[Int], row: Int): List[Slice] = {
+        splits match {
+          case head :: tail => splitLines(problem.pizza.slice(row, row + head), row) ::: executeSplit(problem, tail, row + head)
+          case _            => List.empty
+        }
       }
 
+      val constructList = constructScore(problem, List(ScorePointer(-1, 0)))
+      val splitList = callBack(constructList, List.empty)
+      executeSplit(problem, splitList, 0)
     }
-    */
-    Solution(chooseCorrectSplit(problem, 20))
+
+    Solution(optimalSplit(problem))
   }
 }
