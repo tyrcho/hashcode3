@@ -201,7 +201,7 @@ object Solver {
 
       def constructScore(problem: Problem, splits: List[ScorePointer]): List[ScorePointer] = {
         val currentRow = splits.size
-        if (problem.nbRows == currentRow + 1) {
+        if (problem.nbRows == currentRow - 1) {
           splits
         } else {
           val interestedSplits = splits.takeRight(6)
