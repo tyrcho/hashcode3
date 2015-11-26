@@ -1,5 +1,7 @@
 package hashcode
 
+import scala.annotation.tailrec
+
 object Solver {
   val possibleOrientations = List(
     Orientation(1, 3), Orientation(3, 1), Orientation(1, 4), Orientation(4, 1), Orientation(2, 2), Orientation(1, 5), Orientation(5, 1), Orientation(1, 6), Orientation(6, 1),
@@ -191,7 +193,7 @@ object Solver {
 
     }
 
-    def optimalSplit(problem: Problem): List[Slice] = {
+    def optimalSplitting(problem: Problem): List[Slice] = {
 
       case class ScorePointer(previousRow: Int, score: Int)
 
@@ -233,6 +235,60 @@ object Solver {
       executeSplit(problem, splitList, 0)
     }
 
-    Solution(optimalSplit(problem))
+    def findMissingpoint(problem: Problem, slices: List[Slice]): List[Point] = {
+
+      def findMissingPointRec(problem: Problem, slices: List[Slice], currentPoint: Point, missingPoints: List[Point]): List[Point] = {
+        if (currentPoint.row == problem.nbRows) {
+          missingPoints
+        } else {
+          val slice = Slice(currentPoint, currentPoint)
+          if (slice.overlapsAll(slices)) {
+            if (slice.p2.col == problem.nbCols - 1) {
+              findMissingPointRec(problem, slices, Point(slice.p1.row + 1, 0), missingPoints)
+            } else {
+              findMissingPointRec(problem, slices, Point(slice.p1.row, slice.p2.col + 1), missingPoints)
+            }
+          } else {
+            if (slice.p2.col == problem.nbCols - 1) {
+              findMissingPointRec(problem, slices, Point(slice.p1.row + 1, 0), currentPoint :: missingPoints)
+            } else {
+              findMissingPointRec(problem, slices, Point(slice.p1.row, slice.p2.col + 1), currentPoint :: missingPoints)
+            }
+          }
+        }
+      }
+
+      findMissingPointRec(problem, slices, Point(0, 0), List.empty)
+    }
+
+    def correctedOptimalSplitting(problem: Problem): List[Slice] = {
+
+      def findValidSlice(problem: Problem, slices: List[Slice], point: Point): Option[Slice] = {
+        val candidateSlices = possibleOrientations.map(orientation => Slice(point, Point(point.row + orientation.rows - 1, point.col + orientation.cols - 1)))
+        val validSlices = candidateSlices.filter(slice => slice.isValid(problem)).filter(slice => slice.nbHams(problem) >= problem.nHam).filter(slice => !slice.overlapsAll(slices))
+        if (validSlices.isEmpty) {
+          None
+        } else {
+          Some(validSlices.maxBy { slice => slice.size })
+        }
+      }
+
+      def findNewValidSliceRec(problem: Problem, slices: List[Slice], missingPoints: List[Point]): List[Slice] = {
+        missingPoints match {
+          case head :: tail => findValidSlice(problem, slices, head) match {
+            case Some(slice) => findNewValidSliceRec(problem, slice :: slices, missingPoints diff List(head))
+            case None        => findNewValidSliceRec(problem, slices, missingPoints diff List(head))
+          }
+          case _ => slices
+        }
+      }
+
+      val slices = optimalSplitting(problem)
+      val missingPoints = findMissingpoint(problem, slices)
+      findNewValidSliceRec(problem, slices, missingPoints)
+    }
+
+    val slices = correctedOptimalSplitting(problem)
+    Solution(slices)
   }
 }

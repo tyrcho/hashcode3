@@ -14,6 +14,8 @@ case class Slice(p1: Point, p2: Point) {
 
   def overlaps(o: Slice) = !(o.p2.row < p1.row || p2.row < o.p1.row || o.p2.col < p1.col || p2.col < o.p1.col)
 
+  def overlapsAll(o: List[Slice]): Boolean = (o diff List(this)).map(slice => this.overlaps(slice)).contains(true)
+
   def size = (p2.row - p1.row + 1) * (p2.col - p1.col + 1)
 
   def points = for {
@@ -26,6 +28,16 @@ case class Slice(p1: Point, p2: Point) {
       math.max(p1.col, p2.col) < p.nbCols &&
       math.min(p1.row, p2.row) >= 0 &&
       math.min(p1.col, p2.col) >= 0
+
+  def nbHams(p: Problem): Int = {
+    val isHams = for {
+      i <- p1.row to p2.row
+      j <- p1.col to p2.col
+    } yield {
+      p.isHam(i, j)
+    }
+    isHams.filter { isHam => isHam }.size
+  }
 
 }
 case class Solution(sol: List[Slice])
