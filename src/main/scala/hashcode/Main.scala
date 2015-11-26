@@ -1,6 +1,6 @@
 package hashcode
 
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 object Main extends App {
   val problem = Parser.read()
@@ -15,22 +15,33 @@ object Main extends App {
       Formatter.write(solution, 0)
   }
 
-  lazy val colors = Iterator.continually(Iterator(Console.BLUE_B, Console.RED_B, Console.MAGENTA_B, Console.CYAN_B)).flatten
+  lazy val colors = Iterator.continually(Iterator(Console.GREEN_B, Console.YELLOW_B, Console.BLUE_B, Console.RED_B, Console.MAGENTA_B, Console.CYAN_B)).flatten
 
   def display(problem: Problem, solution: Solution) = {
-    def addColor(str: String, color: String, from: Int, to: Int) = {
-      val (before, right) = str.splitAt(from)
-      val (mid, after) = right.splitAt(to-from+1)
-      before + color + mid + Console.RESET + after
-    }
 
-    val res = solution.sol.foldLeft(problem.pizza) { (pizza,slice) ⇒
-      val color = colors.next()
-      (slice.p1.row to slice.p2.row).foldLeft(pizza) { (pizza, r) ⇒
-        pizza.updated(r, addColor(pizza(r), color, slice.p1.col, slice.p2.col))
+    def constructMap(slices: List[Slice], sliceColors: Map[Slice, String]): Map[Slice, String] = {
+      slices match {
+        case head :: tail =>
+          constructMap(tail, sliceColors updated (head, colors.next()))
+        case _ => sliceColors
       }
     }
 
-    println(res.mkString("\n").replace('T', ' '))
+    def addColorPoint(problem: Problem, point: Point, slices: List[Slice], sliceColors: Map[Slice, String]): String = {
+      val slice = Slice(point, point)
+      if (slice.overlapsAll(slices)) {
+        val firstOverlap = slice.overlapFirst(slices)
+        sliceColors.get(firstOverlap).get + problem.pizza(point.row)(point.col) + Console.RESET
+      } else {
+        Console.WHITE + problem.pizza(point.row)(point.col) + Console.RESET
+      }
+    }
+
+    def addColorLine(problem: Problem, row: Int, slices: List[Slice], sliceColors: Map[Slice, String]) : String = {
+      List.range(0,problem.nbCols,1).map(i => addColorPoint(problem,Point(row,i),slices,sliceColors)).reduce(_ +_)
+    }
+
+    val sliceColors = constructMap(solution.sol, Map.empty)
+    println(List.range(0,problem.nbRows,1).map(row => addColorLine(problem,row,solution.sol,sliceColors)).mkString("\n").replace('T', ' '))
   }
 }

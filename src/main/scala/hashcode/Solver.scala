@@ -320,7 +320,6 @@ object Solver {
     }
 
     val slices = correctedOptimalSplitting(problem)
-    print(slices)
     Solution(slices)
   }
 }
