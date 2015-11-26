@@ -283,12 +283,44 @@ object Solver {
         }
       }
 
+      def extendSliceVerticallyRec(problem: Problem, slices: List[Slice], slice: Slice): List[Slice] = {
+        val candidateSlices = List(Slice(Point(slice.p1.row - 1, slice.p1.col), slice.p2), Slice(slice.p1, Point(slice.p2.row + 1, slice.p2.col)))
+        val validSlices = candidateSlices.filter(sl => sl.isValid(problem)).filter(sl => sl.size <= problem.maxCells).filter(sl => !sl.overlapsAll(slices diff List(slice)))
+        if (validSlices.isEmpty) {
+          List.empty
+        } else {
+          validSlices ::: validSlices.map(sl => extendSliceVerticallyRec(problem, slices diff List(slice), sl)).flatten
+        }
+      }
+
+      def extendSliceVertically(problem: Problem, slices: List[Slice], slice: Slice): Option[Slice] = {
+        val extendSlices = extendSliceVerticallyRec(problem, slices, slice)
+        if (extendSlices.isEmpty) {
+          None
+        } else {
+          Some(extendSlices.maxBy { slice => slice.size })
+        }
+      }
+
+      def extendSlideRec(problem: Problem, slices: List[Slice], slicesLeft: List[Slice]): List[Slice] = {
+        slicesLeft match {
+          case head :: tail =>
+            extendSliceVertically(problem, slices, head) match {
+              case Some(slice) => extendSlideRec(problem, slice :: slices diff List(head), slicesLeft diff List(head))
+              case None        => extendSlideRec(problem, slices, slicesLeft diff List(head))
+            }
+          case _ => slices
+        }
+      }
+
       val slices = optimalSplitting(problem)
       val missingPoints = findMissingpoint(problem, slices)
-      findNewValidSliceRec(problem, slices, missingPoints)
+      val newSlices = findNewValidSliceRec(problem, slices, missingPoints)
+      extendSlideRec(problem, newSlices, newSlices)
     }
 
     val slices = correctedOptimalSplitting(problem)
+    print(slices)
     Solution(slices)
   }
 }
