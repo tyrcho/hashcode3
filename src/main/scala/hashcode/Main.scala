@@ -26,22 +26,40 @@ object Main extends App {
         case _ => sliceColors
       }
     }
-
-    def addColorPoint(problem: Problem, point: Point, slices: List[Slice], sliceColors: Map[Slice, String]): String = {
-      val slice = Slice(point, point)
-      if (slice.overlapsAll(slices)) {
-        val firstOverlap = slice.overlapFirst(slices)
-        sliceColors.get(firstOverlap).get + problem.pizza(point.row)(point.col) + Console.RESET
-      } else {
-        Console.WHITE + problem.pizza(point.row)(point.col) + Console.RESET
+    
+    def constructPointMap(slices: List[Slice], sliceColors: Map[Slice, String], pointColors: Map[Point,String]) : Map[Point,String] = {
+      slices match {
+        case head :: tail =>
+          val sliceColor = sliceColors.get(head).get
+          val coloredPoints = for {
+            row <- head.p1.row to head.p2.row
+            col <- head.p1.col to head.p2.col
+          }yield{
+            (Point(row,col),sliceColor)
+          }
+          constructPointMap(tail, sliceColors, pointColors ++ coloredPoints.toMap)
+        case _ => pointColors
       }
     }
-
-    def addColorLine(problem: Problem, row: Int, slices: List[Slice], sliceColors: Map[Slice, String]) : String = {
-      List.range(0,problem.nbCols,1).map(i => addColorPoint(problem,Point(row,i),slices,sliceColors)).reduce(_ +_)
+    
+    def colorProblem(problem: Problem, pointColors: Map[Point, String]) : List[String] = {
+      val colorLines = for {
+        row <- 0 until problem.nbRows
+      }yield{
+        val line = problem.pizza(row)
+        val colorCharacters = for {
+          col <- 0 until problem.nbCols
+        }yield{
+          pointColors.getOrElse(Point(row,col), Console.WHITE) + problem.pizza(row)(col) + Console.RESET
+        }
+        colorCharacters.toList.reduce(_+_)
+      }
+      colorLines.toList
     }
 
     val sliceColors = constructMap(solution.sol, Map.empty)
-    println(List.range(0,problem.nbRows,1).map(row => addColorLine(problem,row,solution.sol,sliceColors)).mkString("\n").replace('T', ' '))
+    val pointColors= constructPointMap(solution.sol, sliceColors, Map.empty)
+    val problemColor = colorProblem(problem,pointColors)
+    println(problemColor.mkString("\n").replace('T', ' '))
   }
 }
