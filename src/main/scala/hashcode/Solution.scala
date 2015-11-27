@@ -13,6 +13,8 @@ case class Slice(p1: Point, p2: Point) {
       p.col <= p2.col
 
   def overlaps(o: Slice) = !(o.p2.row < p1.row || p2.row < o.p1.row || o.p2.col < p1.col || p2.col < o.p1.col)
+  
+  def overLapsCount(o: List[Slice]): Int = (o diff List(this)).map(slice => this.overlaps(slice)).length
 
   def overlapsAll(o: List[Slice]): Boolean = (o diff List(this)).map(slice => this.overlaps(slice)).contains(true)
   

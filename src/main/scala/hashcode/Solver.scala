@@ -148,6 +148,105 @@ object Solver {
       pizzas.toList
     }
 
+  def solve3(problem: Problem): Solution = {
+
+    def allPossibleSlices(problem: Problem): List[Slice] = {
+      val possibleSlices = for {
+        row <- 0 until problem.nbRows
+        col <- 0 until problem.nbCols
+      } yield {
+        val allSlices = possibleOrientations.map(orientation => Slice(Point(row, col), Point(row + orientation.rows - 1, col + orientation.cols - 1)))
+        allSlices.filter { slice => slice.isValid(problem) }.filter { slice => slice.nbHams(problem) >= problem.nHam }
+      }
+      possibleSlices.toList.flatten
+    }
+
+    def constructPointToSlices(problem: Problem, slices: List[Slice]): List[Map[Point, List[Slice]]] = {
+      val pointInSlices = for {
+        slice <- slices
+        row <- slice.p1.row to slice.p2.row
+        col <- slice.p1.col to slice.p2.col
+      } yield {
+        (Point(row, col), slice)
+      }
+      pointInSlices.groupBy(_._1).map { case (point, pointSlice) => (point, pointSlice.map(_._2)) }.groupBy(_._2.size).toList.sortWith { case ((size1, _), (size2, _)) => size1 <= size2 }.map { case (size, pointSlices) => pointSlices }
+    }
+
+    def selectCriticalSlices(criticalSlices: List[Slice], lessCriticalSlices: Map[Point, List[Slice]]): List[Slice] = {
+      if (lessCriticalSlices.isEmpty) {
+        criticalSlices
+      } else {
+        val lessCriticalSlicesNoScoring = lessCriticalSlices.map { case (point, pointSlice) => pointSlice }.foldLeft(List.empty[Slice])(_ ::: _)
+        val lessCriticalSlicesNoScoringFiltering = lessCriticalSlicesNoScoring.filter { sl => criticalSlices.contains(sl) }
+        if (lessCriticalSlicesNoScoringFiltering.isEmpty) {
+          criticalSlices
+        } else {
+          val criticalSlicesWithScoring = lessCriticalSlicesNoScoringFiltering.groupBy(sl => lessCriticalSlicesNoScoringFiltering.count(_.equals(sl)))
+          criticalSlicesWithScoring.get(criticalSlicesWithScoring.keysIterator.max).get.toSet.toList
+        }
+      }
+    }
+
+    def selectCriticalSlicesInit(pointToSlices: List[Map[Point, List[Slice]]]): List[Slice] = {
+      if (pointToSlices.isEmpty) {
+        List.empty
+      } else {
+        val criticalPointsSlices = pointToSlices(0)
+        val criticalSlicesNoScoring = criticalPointsSlices.map { case (point, pointSlice) => pointSlice }.foldLeft(List.empty[Slice])(_ ::: _)
+        selectCriticalSlices(criticalSlicesNoScoring, criticalPointsSlices).toSet.toList
+      }
+    }
+
+    def selectMostCriticalSlices(pointToSlices: List[Map[Point, List[Slice]]]): List[Slice] = {
+
+      def selectMostCriticalSlicesRec(pointToSlices: List[Map[Point, List[Slice]]], criticalSlices: List[Slice]): List[Slice] = {
+        pointToSlices match {
+          case head :: tail =>
+            val mostCriticalSlices = selectCriticalSlices(criticalSlices, head)
+            if (mostCriticalSlices.length == 1) {
+              mostCriticalSlices
+            } else {
+              selectMostCriticalSlicesRec(tail, mostCriticalSlices)
+            }
+          case _ => criticalSlices
+        }
+      }
+
+      selectMostCriticalSlicesRec(pointToSlices.drop(1), selectCriticalSlicesInit(pointToSlices))
+    }
+
+    def updateSliceList(slices: List[Slice], slice: Slice): List[Slice] = {
+      slices.filter { sl => !sl.overlaps(slice) }
+    }
+
+    def selectBestMostCriticalSlices(problem: Problem, slices: List[Slice], criticalSlices: List[Slice]): Slice = {
+      if (criticalSlices.length == 1) {
+        criticalSlices(0)
+      } else {
+        criticalSlices(1)
+      }
+    }
+
+    def chooseMostCriticalSlices(problem: Problem, slices: List[Slice]): List[Slice] = {
+
+      def chooseMostCriticalSlicesRec(problem: Problem, slices: List[Slice], chooseSlices: List[Slice]): List[Slice] = {
+        if (slices.isEmpty) {
+          chooseSlices
+        } else {
+          val pointToSlices = constructPointToSlices(problem, slices)
+          val mostCriticalSlices = selectMostCriticalSlices(pointToSlices)
+          val chooseSlice = selectBestMostCriticalSlices(problem, slices, mostCriticalSlices)
+          chooseMostCriticalSlicesRec(problem, updateSliceList(slices, chooseSlice), chooseSlice :: chooseSlices)
+        }
+      }
+
+      chooseMostCriticalSlicesRec(problem, slices, List.empty)
+    }
+
+    val slices = chooseMostCriticalSlices(problem, allPossibleSlices(problem))
+    Solution(slices)
+  }
+
   def solve(problem: Problem) = {
     case class FoldState(ham: Int, slices: List[Slice])
     def initialState(row: Int, height: Int) = FoldState(0, List(Slice(Point(row, 0), Point(row + height - 1, -1))))

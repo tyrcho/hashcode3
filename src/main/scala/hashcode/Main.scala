@@ -4,7 +4,7 @@ import scala.util.{ Failure, Success }
 
 object Main extends App {
   val problem = Parser.read()
-  val solution = Solver.solve(problem)
+  val solution = Solver.solve3(problem)
   display(problem, solution)
   Validator.score(solution, problem) match {
     case Success(score) =>
