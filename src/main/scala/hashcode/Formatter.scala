@@ -12,8 +12,8 @@ object Formatter {
     println(s"wrote to $name")
   }
   
-  def read(score: Int): Solution = {
-    val input = io.Source.fromFile(s"out.${score}.txt").getLines().toList
+  def read(): Solution = {
+    val input = io.Source.fromFile(s"input/best_result.txt").getLines().toList
     Solution(input.tail.map(line => line.split(" ")).map(chunks => Slice( Point(chunks(0).toInt,chunks(1).toInt), Point(chunks(2).toInt,chunks(3).toInt))))
   }
   

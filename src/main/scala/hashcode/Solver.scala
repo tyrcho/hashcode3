@@ -302,7 +302,7 @@ object Solver {
     /*val slices = chooseMostCriticalSlices(problem, allPossibleSlices(problem), List.empty)
      * Solution(slices) */
 
-    val solution = Formatter.read(9571)
+    val solution = Formatter.read()
     val initScore = Validator.score(solution, problem).get
     println("Initial solution with score : "+initScore)
     improvedSolution(problem, solution.sol, 1000, 25, initScore)
@@ -481,74 +481,6 @@ object Solver {
 
     val slices = correctedOptimalSplitting(problem)
     Solution(slices)
-  }
-
-  def solve4(problem: Problem): Solution = {
-
-    def allPossibleSlices(problem: Problem): List[Slice] = {
-      val possibleSlices = for {
-        row <- 0 until problem.nbRows
-        col <- 0 until problem.nbCols
-      } yield {
-        val allSlices = possibleOrientations.map(orientation => Slice(Point(row, col), Point(row + orientation.rows - 1, col + orientation.cols - 1)))
-        allSlices.filter { slice => slice.isValid(problem) }.filter { slice => slice.nbHams(problem) >= problem.nHam }
-      }
-      possibleSlices.toList.flatten
-    }
-
-    def randomSlices(possibleSlices: Set[Slice]): Slice = {
-      val rnd = new Random
-      possibleSlices.toVector(rnd.nextInt(possibleSlices.size))
-    }
-
-    def pertubateSolution(possibleSlices: Set[Slice], slices: Set[Slice], nbPerturbations: Int): Set[Slice] = {
-      if (nbPerturbations == 0) {
-        slices
-      } else {
-        val slice = randomSlices(possibleSlices -- slices)
-        val overlapSlices = slice.overLapsList(slices.toList)
-        pertubateSolution(possibleSlices, slices -- overlapSlices, nbPerturbations - 1)
-      }
-    }
-
-    def hillClimbing(possibleSlices: Set[Slice], slices: Set[Slice], nbIterations: Int): Set[Slice] = {
-      if (nbIterations == 0) {
-        slices
-      } else {
-        val slice = randomSlices(possibleSlices -- slices)
-        val overlapSlices = slice.overLapsList(slices.toList)
-        if (slice.size > overlapSlices.map(sl => sl.size).sum) {
-          hillClimbing(possibleSlices, (slices -- overlapSlices) + slice, nbIterations - 1)
-        } else {
-          hillClimbing(possibleSlices, slices, nbIterations - 1)
-        }
-
-      }
-    }
-
-    val possibleSlices = allPossibleSlices(problem).toSet
-
-    def improvedSolution(problem: Problem, slices: Set[Slice], nbImprovements: Int, nbPerturbations: Int, nbIterations: Int, oldScore: Int): Solution = {
-      if (nbImprovements == 0) {
-        Solution(slices.toList)
-      } else {
-        val initialSolution = Solution(slices.toList)
-        val perturbatedSet = pertubateSolution(possibleSlices, slices, nbPerturbations)
-        val correctedSet = hillClimbing(possibleSlices, perturbatedSet, nbIterations)
-        val correctedSolution = Solution(correctedSet.toList)
-        val newScore = Validator.score(correctedSolution, problem).get
-        println("new score : " + newScore)
-        if (newScore > oldScore) {
-          Formatter.write(correctedSolution, Validator.score(correctedSolution, problem).get)
-          improvedSolution(problem, correctedSet, nbImprovements - 1, nbPerturbations, nbIterations, newScore)
-        } else {
-          improvedSolution(problem, slices, nbImprovements - 1, nbPerturbations, nbIterations, oldScore)
-        }
-      }
-    }
-
-    val solution = Formatter.read(9156)
-    improvedSolution(problem, solution.sol.toSet, 100, 20, 100000, Validator.score(solution, problem).get)
   }
 
 }
