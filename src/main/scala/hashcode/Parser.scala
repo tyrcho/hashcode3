@@ -8,4 +8,5 @@ object Parser {
 
     Problem(nbRows, nbCols, h, s, input.tail)
   }
+  
 }
