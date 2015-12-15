@@ -12,6 +12,12 @@ case class Slice(p1: Point, p2: Point) {
       p.col >= p1.col &&
       p.col <= p2.col
 
+  val points: Iterable[Point] =
+    for {
+      row <- p1.row to p2.row
+      col <- p1.col to p2.col
+    } yield Point(row, col)
+
   def overlaps(o: Slice) = !(o.p2.row < p1.row || p2.row < o.p1.row || o.p2.col < p1.col || p2.col < o.p1.col)
 
   def overLapsCount(o: List[Slice]): Int = (o diff List(this)).map(slice => this.overlaps(slice)).length
@@ -33,11 +39,6 @@ case class Slice(p1: Point, p2: Point) {
   def overlapFirst(o: List[Slice]) = (o diff List(this)).filter(slice => this.overlaps(slice))(0)
 
   def size = (p2.row - p1.row + 1) * (p2.col - p1.col + 1)
-
-  def points = for {
-    i <- p1.row to p2.row
-    j <- p1.col to p2.col
-  } yield Point(i, j)
 
   def nbCommonPoints(o: Slice) = {
     this.points.toSet.intersect(o.points.toSet).size
