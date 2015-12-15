@@ -305,7 +305,7 @@ object Solver {
     val solution = Formatter.read()
     val initScore = Validator.score(solution, problem).get
     println("Initial solution with score : "+initScore)
-    improvedSolution(problem, solution.sol, 1000, 25, initScore)
+    improvedSolution(problem, solution.sol, 5000, 25, initScore)
   }
 
   def solve(problem: Problem) = {

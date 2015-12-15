@@ -9,6 +9,10 @@ object Formatter {
     f.println(solution.sol.length)
     f.println(solution.sol.mkString("\n"))
     f.close
+    val f2 = new PrintStream("input/best_result.txt")
+    f2.println(solution.sol.length)
+    f2.println(solution.sol.mkString("\n"))
+    f2.close
     println(s"wrote to $name")
   }
   
