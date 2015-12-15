@@ -26,20 +26,31 @@ object NewSolver {
       else choseSlice.chooseAll
 
     def choseSlice: PartialSolution = {
-      val slice = undecidedSlices.minBy(scoredSlices)
-      println(s"chosing slice $slice")
+      println(s"${undecidedSlices.size} left slices")
+      val slice = subSelection.minBy(scoredSlices)
+      println(s"chosing slice ${slice}")
       val invalidated = overlappingSlices(slice)
       val delta = invalidated + slice
+      val slicesPerPointWithoutChoosingPoints = slicesPerPoint.filterNot(_._2.contains(slice))
       copy(
         undecidedSlices = undecidedSlices -- delta,
-        slicesPerPoint = slicesPerPoint.filterNot(_._2.contains(slice)),
+        slicesPerPoint = slicesPerPointWithoutChoosingPoints.foldLeft(slicesPerPointWithoutChoosingPoints)({ case (map, (point, slices)) => map.updated(point, map(point) -- delta) }).filterNot { _._2.isEmpty },
         chosenSlices = chosenSlices + slice)
     }
 
-    def scoredSlices =
-      undecidedSlices.map { slice =>
+    val subSelection: Set[Slice] = {
+      val slicesPerPointOrdered = slicesPerPoint.groupBy { case (point, slices) => slices.size }
+      if (slicesPerPointOrdered.isEmpty) {
+        Set.empty[Slice]
+      } else {
+        val selectedPoints = slicesPerPointOrdered(slicesPerPointOrdered.keys.min)
+        selectedPoints.foldLeft(Set.empty[Slice])({ case (set, (point, nbSlices)) => set.union(slicesPerPoint(point)) })
+      }
+    }
+
+    def scoredSlices: Map[Slice, Int] = {
+      subSelection.map { slice =>
         val overlapping = overlappingSlices(slice)
-        println(s"evaluation $slice : ${overlapping.size} overlapping")
         val total = (for {
           overlapper <- overlapping
           if undecidedSlices.contains(overlapper)
@@ -49,6 +60,7 @@ object NewSolver {
         } yield score).sum
         slice -> total
       }.toMap
+    }
 
   }
 
